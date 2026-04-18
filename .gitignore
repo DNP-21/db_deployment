@@ -1,0 +1,25 @@
+# PyCharm
+.idea
+
+# Cache
+__pycache__
+.ruff_cache
+
+# Environment
+.env
+.env.alembic
+settings.yaml
+
+# Key files
+*.pem
+
+# Temporary files
+*.tmp
+/tests/repositories/temp
+
+# Predefined data
+/predefined*
+innopolis_user_data.json
+predefined_event_groups.json
+predefined_tags.json
+*.ics
