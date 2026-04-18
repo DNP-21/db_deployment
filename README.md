@@ -11,9 +11,9 @@ Starts containers and sets up them using `init_replica.js`
 ```
 
 ### Testing & Validation
-- Crash the Primary: ./simulate_failure.sh stop_primary
-- Isolate a Secondary: ./simulate_failure.sh network_partition
-- Restore all nodes: ./simulate_failure.sh recover
+- Crash the Primary: `./simulate_failure.sh stop_primary`
+- Isolate a Secondary: `./simulate_failure.sh network_partition`
+- Restore all nodes: `./simulate_failure.sh recover`
 
 ### Teardown
 Completely stops the cluster and wipes all test data
