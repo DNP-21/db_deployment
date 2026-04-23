@@ -20,3 +20,17 @@ Completely stops the cluster and wipes all test data
 ```shell
 ./teardown_local.sh
 ```
+
+# Testing
+
+File `check_primary_failure.sh` checks consistency of data in primary and secondary in case primary fails.
+
+Scenario is the following:
+1. Setup
+2. Dumping in primary and checking amount of data
+3. Crashing primary
+4. Checking data in secondary and pushing new data to them
+5. Restoring primary and checking if updates from secondary are in it
+``` shell
+./check_primary_failure.sh
+```
