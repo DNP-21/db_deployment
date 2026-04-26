@@ -7,18 +7,21 @@ and tearing down the setup
 ### Start and initialize the cluster
 Starts containers and sets up them using `init_replica.js`
 ```shell
-./setup_local.sh
+./setup.sh
 ```
 
 ### Testing & Validation
 - Crash the Primary: `./simulate_failure.sh stop_primary`
-- Isolate a Secondary: `./simulate_failure.sh network_partition`
+- Stop a Secondary: `./simulate_failure.sh stop_secondary`
+- Isolate a Secondary with Docker network disconnect: `./simulate_failure.sh disconnect_secondary`
+- Restart/reconnect a failed Secondary: `./simulate_failure.sh restart_secondary`
 - Restore all nodes: `./simulate_failure.sh recover`
+- Run automated failure injection and failover verification: `python automate_failures.py`
 
 ### Teardown
 Completely stops the cluster and wipes all test data
 ```shell
-./teardown_local.sh
+./teardown.sh
 ```
 
 # Testing
