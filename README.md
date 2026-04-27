@@ -24,6 +24,43 @@ Completely stops the cluster and wipes all test data
 ./teardown.sh
 ```
 
+# Monitoring
+
+Scripts for measuring replication lag, oplog stats, data consistency and replica set status.
+
+### Replication lag
+Shows lag per secondary using `rs.printSecondaryReplicationInfo()` and custom metrics from `rs.status()`:
+```shell
+docker cp monitoring/replication_lag.js mongo-primary:/tmp/ && \
+docker exec mongo-primary mongosh /tmp/replication_lag.js
+```
+
+### Oplog monitor
+Shows oplog size, time window and apply rate:
+```shell
+docker cp monitoring/oplog_monitor.js mongo-primary:/tmp/ && \
+docker exec mongo-primary mongosh /tmp/oplog_monitor.js
+```
+
+### Consistency check
+Compares `dbHash` checksums across all replica set members:
+```shell
+./monitoring/check_checksums.sh
+```
+
+### rs.status() before/during/after failure
+Injects a failure and prints replica set status at each stage:
+```shell
+./monitoring/rs_status_watch.sh stop_secondary
+# or: disconnect_secondary, stop_primary
+```
+
+### Lag tracker
+Polls replication lag every N seconds and logs to `monitoring/lag.log`:
+```shell
+python3 monitoring/lag_tracker.py 5
+```
+
 # Testing
 
 File `check_primary_failure.sh` checks consistency of data in primary and secondary in case primary fails.
