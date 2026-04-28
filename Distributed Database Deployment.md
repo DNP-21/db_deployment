@@ -239,50 +239,283 @@ evidence that all reachable replicas converged to the same logical state.
 
 ## Results
 
-### Successful Deployment
+### Implementation details
 
-Setup of system was automated in `setup.sh`.
+`docker-compose.yml` To simulate existence of 1 primary and 2 secondary tables, 3 Docker containers were used. They are in one replica set named `rs0`. All nodes are included in one Docker network. 
+`init-replica.js` initialises replica set and specifies priorities for replicas. 
+**`scripts/setup.sh`** is basically runs this two scripts one after one and includes all the setup of our replica system
+`scripts/simulate_failure.sh` implements different scenarios of possible fails:
+- `stop_primary` simulates fail of primary replica by just stopping container with it
+- `stop_secondary` simulates fail of secondary replica (usually first one) by just stopping container with it
+- `disconnect_secondary` simulates network disconnection between secondary replicas by `docker network disconnect`
+- `restart_secondary` and `recovery` are made to simulate recover of failed replica by restarting container
+**`scripts/automate_failures.py`** automates testing of failures. It simulates following scenario:
+	1.  *(Optional): stops already existing containers*
+	2. Starts all containers with databases
+	3. Dumps data from `tests/dump.js`
+	4. Simulates failures:
+		1. Secondary failure
+		2. Network disconnect secondary
+		3. Fall of current primary + primary re-election check
+	5. Recovers all the system
+	6. Checks readability on all the replicas
+`monitoring/lag_tracker.py` is logging information about current system health, ping, lag etc every 5 seconds. Lag time is calculated as difference between `optime.ts` for primary and secondary containers.
+### Running
 
+In this section, several examples of interaction with system will be provided. 
+#### Setup
+
+Screenshots in `/Screenshots/setup`
 ```shell
-user@machine db_deployment % ./setup.sh
+arsenijsekin@MacBook-Pro-de-Arsenij db_deployment % scripts/setup.sh   
 Starting MongoDB containers...
-WARN[0000] user/db_deployment/docker-compose.yaml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion 
 [+] Running 4/4
- ✔ Network db_deployment_mongo-cluster  Created                 0.0s 
- ✔ Container mongo-primary              Started                 0.2s 
- ✔ Container mongo-secondary-2          Started                 0.1s 
- ✔ Container mongo-secondary-1          Started                 0.1s 
+ ✔ Network db_deployment_mongo-cluster  Created                                                                                          0.5s 
+ ✔ Container mongo-primary              Started                                                                                          4.9s 
+ ✔ Container mongo-secondary-1          Started                                                                                          4.9s 
+ ✔ Container mongo-secondary-2          Started                                                                                          4.4s 
 ⏳ Waiting for MongoDB nodes to start accepting connections...
 Initializing the replica set...
 Successfully copied 2.05kB to mongo-primary:/tmp/init_replica.js
+{
+  set: 'rs0',
+  date: ISODate('2026-04-28T17:59:06.119Z'),
+  myState: 2,
+  term: Long('0'),
+  syncSourceHost: '',
+  syncSourceId: -1,
+  heartbeatIntervalMillis: Long('2000'),
+  majorityVoteCount: 2,
+  writeMajorityCount: 2,
+  votingMembersCount: 3,
+  writableVotingMembersCount: 3,
+  optimes: {
+    lastCommittedOpTime: {
+      ts: Timestamp({ t: 1777399140, i: 1 }),
+      t: Long('-1')
+    },
+    lastCommittedWallTime: ISODate('2026-04-28T17:59:00.685Z'),
+    readConcernMajorityOpTime: {
+      ts: Timestamp({ t: 1777399140, i: 1 }),
+      t: Long('-1')
+    },
+    appliedOpTime: {
+      ts: Timestamp({ t: 1777399140, i: 1 }),
+      t: Long('-1')
+    },
+    durableOpTime: {
+      ts: Timestamp({ t: 1777399140, i: 1 }),
+      t: Long('-1')
+    },
+    writtenOpTime: {
+      ts: Timestamp({ t: 1777399140, i: 1 }),
+      t: Long('-1')
+    },
+    lastAppliedWallTime: ISODate('2026-04-28T17:59:00.685Z'),
+    lastDurableWallTime: ISODate('2026-04-28T17:59:00.685Z'),
+    lastWrittenWallTime: ISODate('2026-04-28T17:59:00.685Z')
+  },
+  lastStableRecoveryTimestamp: Timestamp({ t: 1777399140, i: 1 }),
+  members: [
+    {
+      _id: 0,
+      name: 'mongo-primary:27017',
+      health: 1,
+      state: 2,
+      stateStr: 'SECONDARY',
+      uptime: 17,
+      optime: {
+        ts: Timestamp({ t: 1777399140, i: 1 }),
+        t: Long('-1')
+      },
+      optimeDate: ISODate('2026-04-28T17:59:00.000Z'),
+      optimeWritten: {
+        ts: Timestamp({ t: 1777399140, i: 1 }),
+        t: Long('-1')
+      },
+      optimeWrittenDate: ISODate('2026-04-28T17:59:00.000Z'),
+      lastAppliedWallTime: ISODate('2026-04-28T17:59:00.685Z'),
+      lastDurableWallTime: ISODate('2026-04-28T17:59:00.685Z'),
+      lastWrittenWallTime: ISODate('2026-04-28T17:59:00.685Z'),
+      syncSourceHost: '',
+      syncSourceId: -1,
+      infoMessage: '',
+      configVersion: 1,
+      configTerm: 0,
+      self: true,
+      lastHeartbeatMessage: ''
+    },
+    {
+      _id: 1,
+      name: 'mongo-secondary-1:27017',
+      health: 1,
+      state: 2,
+      stateStr: 'SECONDARY',
+      uptime: 5,
+      optime: {
+        ts: Timestamp({ t: 1777399140, i: 1 }),
+        t: Long('-1')
+      },
+      optimeDurable: {
+        ts: Timestamp({ t: 1777399140, i: 1 }),
+        t: Long('-1')
+      },
+      optimeWritten: {
+        ts: Timestamp({ t: 1777399140, i: 1 }),
+        t: Long('-1')
+      },
+      optimeDate: ISODate('2026-04-28T17:59:00.000Z'),
+      optimeDurableDate: ISODate('2026-04-28T17:59:00.000Z'),
+      optimeWrittenDate: ISODate('2026-04-28T17:59:00.000Z'),
+      lastAppliedWallTime: ISODate('2026-04-28T17:59:00.685Z'),
+      lastDurableWallTime: ISODate('2026-04-28T17:59:00.685Z'),
+      lastWrittenWallTime: ISODate('2026-04-28T17:59:00.685Z'),
+      lastHeartbeat: ISODate('2026-04-28T17:59:06.083Z'),
+      lastHeartbeatRecv: ISODate('2026-04-28T17:59:05.726Z'),
+      pingMs: Long('4'),
+      lastHeartbeatMessage: '',
+      syncSourceHost: '',
+      syncSourceId: -1,
+      infoMessage: '',
+      configVersion: 1,
+      configTerm: 0
+    },
+    {
+      _id: 2,
+      name: 'mongo-secondary-2:27017',
+      health: 1,
+      state: 2,
+      stateStr: 'SECONDARY',
+      uptime: 5,
+      optime: {
+        ts: Timestamp({ t: 1777399140, i: 1 }),
+        t: Long('-1')
+      },
+      optimeDurable: {
+        ts: Timestamp({ t: 1777399140, i: 1 }),
+        t: Long('-1')
+      },
+      optimeWritten: {
+        ts: Timestamp({ t: 1777399140, i: 1 }),
+        t: Long('-1')
+      },
+      optimeDate: ISODate('2026-04-28T17:59:00.000Z'),
+      optimeDurableDate: ISODate('2026-04-28T17:59:00.000Z'),
+      optimeWrittenDate: ISODate('2026-04-28T17:59:00.000Z'),
+      lastAppliedWallTime: ISODate('2026-04-28T17:59:00.685Z'),
+      lastDurableWallTime: ISODate('2026-04-28T17:59:00.685Z'),
+      lastWrittenWallTime: ISODate('2026-04-28T17:59:00.685Z'),
+      lastHeartbeat: ISODate('2026-04-28T17:59:06.084Z'),
+      lastHeartbeatRecv: ISODate('2026-04-28T17:59:05.840Z'),
+      pingMs: Long('1'),
+      lastHeartbeatMessage: '',
+      syncSourceHost: '',
+      syncSourceId: -1,
+      infoMessage: '',
+      configVersion: 1,
+      configTerm: 0
+    }
+  ],
+  ok: 1,
+  '$clusterTime': {
+    clusterTime: Timestamp({ t: 1777399140, i: 1 }),
+    signature: {
+      hash: Binary.createFromBase64('AAAAAAAAAAAAAAAAAAAAAAAAAAA=', 0),
+      keyId: Long('0')
+    }
+  },
+  operationTime: Timestamp({ t: 1777399140, i: 1 })
+}
 Local distributed cluster is up and running!
 Primary port: 27017
 Secondary ports: 27018, 27019
 To connect to the primary via shell, run: docker exec -it mongo-primary mongosh
 ```
+#### Automated testing
+Screenshots in `Screenshots/automated_testing`
+```shell
+arsenijsekin@MacBook-Pro-de-Arsenij db_deployment % python3 scripts/automate_failures.py
+Cleaning previous containers (if any)...
+Starting MongoDB containers...
++ docker compose -f /Users/arsenijsekin/Desktop/DNP/project/db_deployment/docker-compose.yaml up -d
+Initializing replica set...
++ docker cp /Users/arsenijsekin/Desktop/DNP/project/db_deployment/mongo/init_replica.js mongo-primary:/tmp/init_replica.js
++ docker exec mongo-primary mongosh /tmp/init_replica.js
+Initial primary: mongo-primary
+Loading test data...
++ docker exec mongo-primary mongosh --quiet /tmp/dump.js
+Checking read availability on mongo-secondary-1...
++ docker exec mongo-secondary-1 mongosh --quiet /tmp/read_availability.js
+Checking read availability on mongo-secondary-2...
++ docker exec mongo-secondary-2 mongosh --quiet /tmp/read_availability.js
+Failure 1: stop one secondary container (mongo-secondary-1).
++ docker stop mongo-secondary-1
+Checking read availability on mongo-secondary-2...
++ docker exec mongo-secondary-2 mongosh --quiet /tmp/read_availability.js
+Restart failed replica (mongo-secondary-1).
++ docker start mongo-secondary-1
++ docker network connect db_deployment_mongo-cluster mongo-secondary-1
+Checking read availability on mongo-secondary-1...
++ docker exec mongo-secondary-1 mongosh --quiet /tmp/read_availability.js
+Failure 2: pause network between primary and one secondary using docker network disconnect.
++ docker network disconnect db_deployment_mongo-cluster mongo-secondary-1
+Checking read availability on mongo-secondary-2...
++ docker exec mongo-secondary-2 mongosh --quiet /tmp/read_availability.js
+Reconnect network-isolated replica.
++ docker start mongo-secondary-1
++ docker network connect db_deployment_mongo-cluster mongo-secondary-1
+Checking read availability on mongo-secondary-1...
++ docker exec mongo-secondary-1 mongosh --quiet /tmp/read_availability.js
+Failure 3: stop current primary and verify automatic re-election (mongo-primary).
++ docker stop mongo-primary
+New primary after failover: mongo-secondary-1
+Checking read availability on mongo-secondary-1...
++ docker exec mongo-secondary-1 mongosh --quiet /tmp/read_availability.js
+Recover stopped primary.
++ docker start mongo-primary
+Final writable primary: mongo-primary
+Checking read availability on mongo-primary...
++ docker exec mongo-primary mongosh --quiet /tmp/read_availability.js
+Checking read availability on mongo-secondary-1...
++ docker exec mongo-secondary-1 mongosh --quiet /tmp/read_availability.js
+Checking read availability on mongo-secondary-2...
++ docker exec mongo-secondary-2 mongosh --quiet /tmp/read_availability.js
+Failure automation completed successfully.
+```
+#### Monitoring lag
+Now we also run `monitoring/lag_tracker.py` while automated testing to collect live information about system while fails. Screenshots in `Screenshots/monitoring`
+``` shell
+arsenijsekin@MacBook-Pro-de-Arsenij db_deployment % python3 monitoring/lag_tracker.py
+Lag tracker started, polling every 5s. Log: monitoring/lag.log
+Press Ctrl+C to stop.
 
-### Replication Lag Measurements
-
-Studying logs from `lag_tracker.py` from execution of `rs_status_watch.sh` , we simulated some of the possible failures
-of containers and discovered several lag events. In particular, failing one of two secondary containers yielded a 10-11
-seconds lag, while failing the connection between just the primary and secondary containers resulted in a 10 seconds
-lag. However, stopping the primary container did not cause lag, but resulted in absence of `ping` from primary up to 5
-seconds, until the new primary container has been elected.
-
-### Consistency Validation
-
-`dbHash` output before and after failure injection showed **identical checksums** across all three nodes after recovery,
-confirming no data divergence.
-
-### Read Availability During Failures
-
-| Scenario                       | Read Available? | Notes                          |
-|--------------------------------|-----------------|--------------------------------|
-| All nodes healthy              | Yes             | Reads from secondaries         |
-| Primary down (no writes)       | Yes             | Secondary reads work           |
-| Two secondaries down           | Yes             | Primary still serves reads     |
-| Network partition on secondary | Yes             | Remaining replicas serve reads |
-
+[2026-04-28T18:11:55Z] no reachable primary
+[2026-04-28T18:12:09Z] NO_PRIMARY
+[2026-04-28T18:12:39Z] mongo-secondary-1:27017  lag=0s  health=1  pingMs=4
+[2026-04-28T18:12:39Z] mongo-secondary-2:27017  lag=0s  health=1  pingMs=4
+[2026-04-28T18:12:55Z] mongo-secondary-1:27017  lag=0s  health=1  pingMs=7
+[2026-04-28T18:12:55Z] mongo-secondary-2:27017  lag=0s  health=1  pingMs=7
+[2026-04-28T18:13:09Z] mongo-secondary-1:27017  lag=0s  health=1  pingMs=7
+[2026-04-28T18:13:09Z] mongo-secondary-2:27017  lag=0s  health=1  pingMs=4
+[2026-04-28T18:13:23Z] mongo-secondary-2:27017  lag=0s  health=1  pingMs=6
+[2026-04-28T18:13:36Z] mongo-secondary-1:27017  lag=0s  health=1  pingMs=2
+[2026-04-28T18:13:36Z] mongo-secondary-2:27017  lag=0s  health=1  pingMs=4
+[2026-04-28T18:13:52Z] mongo-secondary-2:27017  lag=0s  health=1  pingMs=8
+[2026-04-28T18:14:07Z] mongo-secondary-1:27017  lag=0s  health=1  pingMs=6
+[2026-04-28T18:14:07Z] mongo-secondary-2:27017  lag=0s  health=1  pingMs=9
+[2026-04-28T18:14:22Z] mongo-secondary-1:27017  lag=0s  health=1  pingMs=7
+[2026-04-28T18:14:22Z] mongo-secondary-2:27017  lag=0s  health=1  pingMs=5
+[2026-04-28T18:14:34Z] mongo-primary:27017  lag=0s  health=1  pingMs=6
+[2026-04-28T18:14:34Z] mongo-secondary-2:27017  lag=0s  health=1  pingMs=6
+[2026-04-28T18:14:53Z] mongo-secondary-2:27017  lag=0s  health=1  pingMs=6
+[2026-04-28T18:15:06Z] mongo-secondary-2:27017  lag=0s  health=1  pingMs=10
+[2026-04-28T18:15:21Z] mongo-primary:27017  lag=0s  health=1  pingMs=undefined
+[2026-04-28T18:15:21Z] mongo-secondary-2:27017  lag=0s  health=1  pingMs=6
+[2026-04-28T18:15:33Z] mongo-secondary-1:27017  lag=0s  health=1  pingMs=6
+[2026-04-28T18:15:33Z] mongo-secondary-2:27017  lag=0s  health=1  pingMs=5
+[2026-04-28T18:15:47Z] mongo-secondary-1:27017  lag=0s  health=1  pingMs=7
+[2026-04-28T18:15:47Z] mongo-secondary-2:27017  lag=0s  health=1  pingMs=4
+```
 ## Discussion
 
 ### Achievements
