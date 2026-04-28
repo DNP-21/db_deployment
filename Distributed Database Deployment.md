@@ -97,10 +97,9 @@ primary and then propagated to the secondaries through the `oplog` replication m
 The deployment was defined declaratively in `docker-compose.yaml`. Each service uses the same MongoDB image and starts
 `mongod` with the same replica-set identifier, which guarantees homogeneous node configuration.
 
-**`docker-compose.yaml`** (shortened):
+**`docker-compose.yaml`**:
 
 ``` yaml
-version: '3.8'
 services:
   mongo-primary:
     image: mongo:latest
@@ -108,6 +107,8 @@ services:
     command: ["mongod", "--replSet", "rs0", "--bind_ip_all", "--port", "27017"]
     ports:
       - "27017:27017"
+    networks:
+      - mongo-cluster
 
   mongo-secondary-1:
     image: mongo:latest
@@ -115,6 +116,8 @@ services:
     command: ["mongod", "--replSet", "rs0", "--bind_ip_all", "--port", "27017"]
     ports:
       - "27018:27017"
+    networks:
+      - mongo-cluster
 
   mongo-secondary-2:
     image: mongo:latest
@@ -122,6 +125,12 @@ services:
     command: ["mongod", "--replSet", "rs0", "--bind_ip_all", "--port", "27017"]
     ports:
       - "27019:27017"
+    networks:
+      - mongo-cluster
+
+networks:
+  mongo-cluster:
+    driver: bridge
 ```
 
 Cluster startup was automated by `scripts/setup.sh` and executed in four steps:
