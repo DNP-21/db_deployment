@@ -252,11 +252,11 @@ in one replica set named `rs0`. All nodes are included in one Docker network.
     2. Starts all containers with databases
     3. Dumps data from `tests/dump.js`
     4. Simulates failures:
-    1. Secondary failure
-    2. Network disconnect secondary
-    3. Fall of current primary + primary re-election check
-    5. Recovers all the system
-    6. Checks readability on all the replicas
+    5. Secondary failure
+    6. Network disconnect secondary
+    7. Fall of current primary + primary re-election check
+    8. Recovers all the system
+    9. Checks readability on all the replicas
        `monitoring/lag_tracker.py` is logging information about current system health, ping, lag etc every 5 seconds.
        Lag time is calculated as difference between `optime.ts` for primary and secondary containers.
 
@@ -266,7 +266,7 @@ In this section, several examples of interaction with system will be provided.
 
 #### Setup
 
-Screenshots in `/Screenshots/setup`
+Screenshots in `/screenshots/setup`
 
 ```shell
 arsenijsekin@MacBook-Pro-de-Arsenij db_deployment % scripts/setup.sh   
@@ -436,7 +436,7 @@ To connect to the primary via shell, run: docker exec -it mongo-primary mongosh
 
 #### Automated testing
 
-Screenshots in `Screenshots/automated_testing`
+Screenshots in `screenshots/automated_testing`
 
 ```shell
 arsenijsekin@MacBook-Pro-de-Arsenij db_deployment % python3 scripts/automate_failures.py
@@ -491,7 +491,7 @@ Failure automation completed successfully.
 #### Monitoring lag
 
 Now we also run `monitoring/lag_tracker.py` while automated testing to collect live information about system while
-fails. Screenshots in `Screenshots/monitoring`
+fails. Screenshots in `screenshots/monitoring`
 
 ```shell
 arsenijsekin@MacBook-Pro-de-Arsenij db_deployment % python3 monitoring/lag_tracker.py
