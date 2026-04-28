@@ -34,26 +34,20 @@ flowchart LR
     A[Client Applications] -->|Writes| B[Primary Node<br/>mongo-primary:27017]
     A -->|Reads| C[Secondary Node<br/>mongo-secondary-1:27018]
     A -->|Reads| D[Secondary Node<br/>mongo-secondary-2:27019]
-    
     B <-->|Replication| C
     B <-->|Replication| D
-    
     E[Failure Scripts] -->|docker stop / network disconnect| B
     E -->|docker stop / network disconnect| C
     E -->|docker stop / network disconnect| D
-    
-    F[Monitoring Scripts] -->|rs.status / dbHash / lag| B
-    F -->|rs.status / dbHash / lag| C
-    F -->|rs.status / dbHash / lag| D
-
-    style B fill:#4CAF50,stroke:#2E7D32,stroke-width:3px
-    style C fill:#2196F3,stroke:#0D47A1,stroke-width:2px
-    style D fill:#2196F3,stroke:#0D47A1,stroke-width:2px
-    style E fill:#F44336,stroke:#B71C1C,stroke-width:2px
-    style F fill:#9C27B0,stroke:#4A148C,stroke-width:2px
+    F[Monitoring Scripts] -->|rs . status / dbHash / lag| B
+    F -->|rs . status / dbHash / lag| C
+    F -->|rs . status / dbHash / lag| D
+    style B fill: #4CAF50, stroke: #2E7D32, stroke-width: 3px
+    style C fill: #2196F3, stroke: #0D47A1, stroke-width: 2px
+    style D fill: #2196F3, stroke: #0D47A1, stroke-width: 2px
+    style E fill: #F44336, stroke: #B71C1C, stroke-width: 2px
+    style F fill: #9C27B0, stroke: #4A148C, stroke-width: 2px
 ```
-
-
 
 The experimental system was implemented as a three-node MongoDB replica set running in isolated Docker containers on a
 single host. Each container runs one `mongodb` process with replication enabled through the `--replSet rs0` option and
@@ -86,15 +80,13 @@ primary and then propagated to the secondaries through the `oplog` replication m
 
 ### Technology Stack
 
-
 | Component        | Technology                  | Purpose                                  |
-| ---------------- | --------------------------- | ---------------------------------------- |
+|------------------|-----------------------------|------------------------------------------|
 | Database         | MongoDB Replica Set         | Distributed NoSQL DB                     |
 | Containerization | Docker & Docker Compose     | Reproducible environment                 |
 | Automation       | Python 3, Bash              | Failure injection, testing               |
 | Monitoring       | mongosh + custom JS scripts | Lag tracking, consistency                |
 | Orchestration    | Shell scripts               | Deployment, teardown, failure simulation |
-
 
 ### Deployment Configuration
 
@@ -181,7 +173,7 @@ scenarios without modifying MongoDB internals. Two failure classes were evaluate
 
 1. **Node crash**: the target container is stopped with `docker stop`, simulating abrupt process or host failure.
 2. **Network isolation**: a secondary is detached from `db_deployment_mongo-cluster` with `docker network disconnect`,
-  simulating loss of communication with the rest of the replica set.
+   simulating loss of communication with the rest of the replica set.
 
 Recovery is triggered with `docker start` and `docker network connect`, which allows observation of secondary catch-up
 and reintegration after the fault is removed.
@@ -209,24 +201,22 @@ For manual experiments, the same failure modes are exposed through `scripts/simu
 
 ### Monitoring and Consistency Validation
 
-
 | Script               | Function                                                            |
-| -------------------- | ------------------------------------------------------------------- |
+|----------------------|---------------------------------------------------------------------|
 | `replication_lag.js` | Measures oplog timestamp difference between primary and secondaries |
 | `lag_tracker.py`     | Polls the cluster periodically and logs lag, health, and ping       |
 | `oplog_monitor.js`   | Reports `oplog.rs` size and time window                             |
 | `check_checksums.sh` | Compares `dbHash` across all three nodes                            |
 | `rs_status_watch.sh` | Captures member state before, during, and after failure injection   |
 
-
 The evaluation used four operational metrics:
 
 1. **Failover success and failover time**: whether a new writable primary appears after the current primary is stopped,
-  and how long that transition takes.
+   and how long that transition takes.
 2. **Replication lag**: calculated as the difference between primary and secondary oplog timestamps obtained from
-  `rs.status()`.
+   `rs.status()`.
 3. **Read availability**: whether read queries continue to succeed on remaining reachable nodes during fault
-  conditions.
+   conditions.
 4. **Post-recovery consistency**: whether `dbHash` values match across nodes after the cluster converges again.
 
 Replication lag was measured in two ways. First, `monitoring/replication_lag.js` prints a snapshot of each secondary's
@@ -247,8 +237,9 @@ evidence that all reachable replicas converged to the same logical state.
 
 ### Implementation details
 
-`docker-compose.yml` To simulate existence of 1 primary and 2 secondary tables, 3 Docker containers were used. They are in one replica set named `rs0`. All nodes are included in one Docker network. 
-`init-replica.js` initialises replica set and specifies priorities for replicas. 
+`docker-compose.yml` To simulate existence of 1 primary and 2 secondary tables, 3 Docker containers were used. They are
+in one replica set named `rs0`. All nodes are included in one Docker network.
+`init-replica.js` initialises replica set and specifies priorities for replicas.
 `**scripts/setup.sh`** is basically runs this two scripts one after one and includes all the setup of our replica system
 `scripts/simulate_failure.sh` implements different scenarios of possible fails:
 
@@ -256,21 +247,22 @@ evidence that all reachable replicas converged to the same logical state.
 - `stop_secondary` simulates fail of secondary replica (usually first one) by just stopping container with it
 - `disconnect_secondary` simulates network disconnection between secondary replicas by `docker network disconnect`
 - `restart_secondary` and `recovery` are made to simulate recover of failed replica by restarting container
-`**scripts/automate_failures.py**` automates testing of failures. It simulates following scenario:
-  1. *(Optional): stops already existing containers*
-  2. Starts all containers with databases
-  3. Dumps data from `tests/dump.js`
-  4. Simulates failures:
+  `**scripts/automate_failures.py**` automates testing of failures. It simulates following scenario:
+    1. *(Optional): stops already existing containers*
+    2. Starts all containers with databases
+    3. Dumps data from `tests/dump.js`
+    4. Simulates failures:
     1. Secondary failure
     2. Network disconnect secondary
     3. Fall of current primary + primary re-election check
-  5. Recovers all the system
-  6. Checks readability on all the replicas
-  `monitoring/lag_tracker.py` is logging information about current system health, ping, lag etc every 5 seconds. Lag time is calculated as difference between `optime.ts` for primary and secondary containers.
+    5. Recovers all the system
+    6. Checks readability on all the replicas
+       `monitoring/lag_tracker.py` is logging information about current system health, ping, lag etc every 5 seconds.
+       Lag time is calculated as difference between `optime.ts` for primary and secondary containers.
 
 ### Running
 
-In this section, several examples of interaction with system will be provided. 
+In this section, several examples of interaction with system will be provided.
 
 #### Setup
 
@@ -498,7 +490,8 @@ Failure automation completed successfully.
 
 #### Monitoring lag
 
-Now we also run `monitoring/lag_tracker.py` while automated testing to collect live information about system while fails. Screenshots in `Screenshots/monitoring`
+Now we also run `monitoring/lag_tracker.py` while automated testing to collect live information about system while
+fails. Screenshots in `Screenshots/monitoring`
 
 ```shell
 arsenijsekin@MacBook-Pro-de-Arsenij db_deployment % python3 monitoring/lag_tracker.py
@@ -547,13 +540,13 @@ Our system successfully demonstrated:
 ### Challenges Encountered
 
 1. **Replica set reconfiguration after partition**
-  When a disconnected node rejoined, it took 8–10 seconds to catch up. This could be improved by increasing `oplog`
+   When a disconnected node rejoined, it took 8–10 seconds to catch up. This could be improved by increasing `oplog`
    size (default ~5% of disk).
 2. **Monitoring automation complexity**
-  Parsing `rs.printSecondaryReplicationInfo()` required custom regex. A better approach would be using MongoDB’s
+   Parsing `rs.printSecondaryReplicationInfo()` required custom regex. A better approach would be using MongoDB’s
    Prometheus exporter.
 3. **Docker network limitations**
-  `docker network disconnect` does not simulate packet loss or latency. For realistic WAN testing, we would need `tc` (
+   `docker network disconnect` does not simulate packet loss or latency. For realistic WAN testing, we would need `tc` (
    traffic control) or Chaos Monkey.
 
 ### Improvements for Production
@@ -563,5 +556,5 @@ Our system successfully demonstrated:
 - **Use host networking or Kubernetes** – For multi-machine deployment.
 - **Implement read concern `majority`** – To avoid stale reads after failback.
 - **Monitor oplog window** – If secondaries lag beyond oplog window, re-sync is required. Our monitoring script warns at
-80% usage.
+  80% usage.
 
