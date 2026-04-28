@@ -2,6 +2,9 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
 NETWORK="${NETWORK:-db_deployment_mongo-cluster}"
 SECONDARY="${SECONDARY:-mongo-secondary-1}"
 SURVIVING_SECONDARY="${SURVIVING_SECONDARY:-mongo-secondary-2}"
@@ -9,7 +12,7 @@ READ_SCRIPT="/tmp/read_availability.js"
 
 copy_read_check() {
     local node="$1"
-    docker cp tests/read_availability.js "$node:$READ_SCRIPT" >/dev/null
+    docker cp "$REPO_ROOT/tests/read_availability.js" "$node:$READ_SCRIPT" >/dev/null
 }
 
 run_read_check() {
@@ -47,10 +50,10 @@ echo "Cleaning previous containers (if any)..."
 docker rm -f mongo-primary mongo-secondary-1 mongo-secondary-2 >/dev/null 2>&1 || true
 
 echo "Starting and initializing replica set..."
-./setup.sh
+"$SCRIPT_DIR/setup.sh"
 
 echo "Loading test data..."
-docker cp tests/dump.js mongo-primary:/tmp/dump.js >/dev/null
+docker cp "$REPO_ROOT/tests/dump.js" mongo-primary:/tmp/dump.js >/dev/null
 docker exec mongo-primary mongosh --quiet /tmp/dump.js
 
 echo "Initial primary:"
@@ -61,22 +64,22 @@ run_read_check "$SECONDARY"
 run_read_check "$SURVIVING_SECONDARY"
 
 echo "Failure 1: stop one secondary container ($SECONDARY)."
-SECONDARY="$SECONDARY" ./simulate_failure.sh stop_secondary
+SECONDARY="$SECONDARY" "$SCRIPT_DIR/simulate_failure.sh" stop_secondary
 sleep 5
 run_read_check "$SURVIVING_SECONDARY"
 
 echo "Restart failed replica ($SECONDARY)."
-SECONDARY="$SECONDARY" NETWORK="$NETWORK" ./simulate_failure.sh restart_secondary
+SECONDARY="$SECONDARY" NETWORK="$NETWORK" "$SCRIPT_DIR/simulate_failure.sh" restart_secondary
 sleep 10
 run_read_check "$SECONDARY"
 
 echo "Failure 2: pause network between primary and one secondary using docker network disconnect."
-SECONDARY="$SECONDARY" NETWORK="$NETWORK" ./simulate_failure.sh disconnect_secondary
+SECONDARY="$SECONDARY" NETWORK="$NETWORK" "$SCRIPT_DIR/simulate_failure.sh" disconnect_secondary
 sleep 5
 run_read_check "$SURVIVING_SECONDARY"
 
 echo "Reconnect network-isolated replica."
-SECONDARY="$SECONDARY" NETWORK="$NETWORK" ./simulate_failure.sh restart_secondary
+SECONDARY="$SECONDARY" NETWORK="$NETWORK" "$SCRIPT_DIR/simulate_failure.sh" restart_secondary
 sleep 10
 run_read_check "$SECONDARY"
 

@@ -1,12 +1,14 @@
 import subprocess
 import sys
 import time
+from pathlib import Path
 
 
 NETWORK = "db_deployment_mongo-cluster"
 SECONDARY = "mongo-secondary-1"
 SURVIVING_SECONDARY = "mongo-secondary-2"
 NODES = ["mongo-primary", "mongo-secondary-1", "mongo-secondary-2"]
+BASE_DIR = Path(__file__).resolve().parent.parent
 
 
 def run(args, *, check=True, quiet=False):
@@ -53,7 +55,7 @@ def wait_for_primary(timeout=60):
 
 def read_check(node):
     print(f"Checking read availability on {node}...", flush=True)
-    run(["docker", "cp", "tests/read_availability.js", f"{node}:/tmp/read_availability.js"], quiet=True)
+    run(["docker", "cp", str(BASE_DIR / "tests" / "read_availability.js"), f"{node}:/tmp/read_availability.js"], quiet=True)
     run(["docker", "exec", node, "mongosh", "--quiet", "/tmp/read_availability.js"])
 
 
@@ -68,18 +70,18 @@ def main():
         run(["docker", "rm", "-f", node], check=False, quiet=True)
 
     print("Starting MongoDB containers...", flush=True)
-    run(["docker", "compose", "up", "-d"])
+    run(["docker", "compose", "-f", str(BASE_DIR / "docker-compose.yaml"), "up", "-d"])
     time.sleep(8)
 
     print("Initializing replica set...", flush=True)
-    run(["docker", "cp", "init_replica.js", "mongo-primary:/tmp/init_replica.js"])
+    run(["docker", "cp", str(BASE_DIR / "mongo" / "init_replica.js"), "mongo-primary:/tmp/init_replica.js"])
     run(["docker", "exec", "mongo-primary", "mongosh", "/tmp/init_replica.js"])
 
     initial_primary = wait_for_primary(60)
     print(f"Initial primary: {initial_primary}", flush=True)
 
     print("Loading test data...", flush=True)
-    run(["docker", "cp", "tests/dump.js", f"{initial_primary}:/tmp/dump.js"], quiet=True)
+    run(["docker", "cp", str(BASE_DIR / "tests" / "dump.js"), f"{initial_primary}:/tmp/dump.js"], quiet=True)
     run(["docker", "exec", initial_primary, "mongosh", "--quiet", "/tmp/dump.js"])
 
     read_check(SECONDARY)

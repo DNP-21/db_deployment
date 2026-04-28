@@ -3,6 +3,9 @@
 # Usage: ./monitoring/rs_status_watch.sh [failure_type]
 # Failure types: stop_secondary (default), disconnect_secondary, stop_primary
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
 FAILURE="${1:-stop_secondary}"
 SETTLE=5
 
@@ -32,7 +35,7 @@ print_status() {
 print_status "BEFORE failure"
 
 echo "Injecting failure: $FAILURE"
-./simulate_failure.sh "$FAILURE"
+"$REPO_ROOT/scripts/simulate_failure.sh" "$FAILURE"
 echo ""
 
 echo "Waiting ${SETTLE}s for cluster to react"
@@ -41,7 +44,7 @@ sleep $SETTLE
 print_status "DURING failure"
 
 echo "Recovering cluster"
-./simulate_failure.sh recover
+"$REPO_ROOT/scripts/simulate_failure.sh" recover
 echo ""
 
 echo "Waiting ${SETTLE}s for recovery"

@@ -2,6 +2,8 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 NETWORK="${NETWORK:-db_deployment_mongo-cluster}"
 SECONDARY="${SECONDARY:-mongo-secondary-1}"
 

@@ -1,27 +1,34 @@
 # MongoDB Replica Set
 
-That repository contains docker compose files and some shell files
-for setting up local cluster of Mongo databases, simulating failures
-and tearing down the setup
+This repository contains Docker Compose configuration plus operational
+scripts for setting up a local MongoDB replica set, simulating failures,
+and tearing the setup down.
+
+Project layout:
+- `scripts/` operational entrypoints for setup, teardown, failover simulation, and end-to-end checks
+- `mongo/` replica set initialization assets
+- `monitoring/` monitoring and diagnostics utilities
+- `tests/` Mongo shell scripts used by validation scenarios
 
 ### Start and initialize the cluster
-Starts containers and sets up them using `init_replica.js`
+Starts containers and initializes the replica set using `mongo/init_replica.js`
 ```shell
-./setup.sh
+./scripts/setup.sh
 ```
 
 ### Testing & Validation
-- Crash the Primary: `./simulate_failure.sh stop_primary`
-- Stop a Secondary: `./simulate_failure.sh stop_secondary`
-- Isolate a Secondary with Docker network disconnect: `./simulate_failure.sh disconnect_secondary`
-- Restart/reconnect a failed Secondary: `./simulate_failure.sh restart_secondary`
-- Restore all nodes: `./simulate_failure.sh recover`
-- Run automated failure injection and failover verification: `python automate_failures.py`
+- Crash the Primary: `./scripts/simulate_failure.sh stop_primary`
+- Stop a Secondary: `./scripts/simulate_failure.sh stop_secondary`
+- Isolate a Secondary with Docker network disconnect: `./scripts/simulate_failure.sh disconnect_secondary`
+- Restart/reconnect a failed Secondary: `./scripts/simulate_failure.sh restart_secondary`
+- Restore all nodes: `./scripts/simulate_failure.sh recover`
+- Run automated failure injection and failover verification: `./scripts/automate_failures.sh`
+- Run the Python version of the same flow: `python3 scripts/automate_failures.py`
 
 ### Teardown
 Completely stops the cluster and wipes all test data
 ```shell
-./teardown.sh
+./scripts/teardown.sh
 ```
 
 # Monitoring
@@ -72,5 +79,5 @@ Scenario is the following:
 4. Checking data in secondary and pushing new data to them
 5. Restoring primary and checking if updates from secondary are in it
 ``` shell
-./check_primary_failure.sh
+./scripts/check_primary_failure.sh
 ```

@@ -14,6 +14,7 @@ settings.yaml
 *.pem
 
 # Temporary files
+.DS_Store
 *.tmp
 /tests/repositories/temp
 
